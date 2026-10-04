@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $# == 1 && $1 == --install ]] || { echo 'Usage: scripts/setup --install (downloads GB; installs system packages)'; exit 2; }
+source "$(dirname "$0")/env"
+source /etc/os-release
+[[ $ID == ubuntu && $VERSION_ID == 24.04 && $(uname -m) == x86_64 ]] || { echo 'Requires Ubuntu 24.04 x86-64'; exit 1; }
+sudo_cmd=()
+(( EUID == 0 )) || sudo_cmd=(sudo)
+"${sudo_cmd[@]}" apt-get update
+"${sudo_cmd[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  ca-certificates curl git unzip zip xz-utils bzip2 zstd lz4 p7zip-full squashfs-tools \
+  file xxd binutils patch build-essential clang llvm lld cmake meson ninja-build pkg-config \
+  libglib2.0-dev libpixman-1-dev libfdt-dev libssl-dev libfontconfig1-dev liblzma-dev \
+  python3-dev python3-venv openjdk-21-jdk-headless qemu-system-arm qemu-utils \
+  gdb-multiarch device-tree-compiler adb fastboot
+mkdir -p "$TOOLBOX_ROOT/.local" "$TOOLBOX_ROOT/workspace" "$TOOLBOX_ROOT/projects"
+python3 -m venv "$TOOLBOX_ROOT/.venv"
+python -m pip install -r "$TOOLBOX_ROOT/requirements.txt"
+archive="$TOOLBOX_ROOT/.local/ghidra.zip"
+if [[ ! -d $GHIDRA_INSTALL_DIR ]]; then
+  curl -fL --retry 3 https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.3_build/ghidra_12.1.3_PUBLIC_20260817.zip -o "$archive"
+  echo "93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54  $archive" | sha256sum -c -
+  unzip -q "$archive" -d "$TOOLBOX_ROOT/.local"
+  rm "$archive"
+fi
+if [[ ! -x $CARGO_HOME/bin/rustup ]]; then
+  curl -fL --retry 3 https://sh.rustup.rs -o "$TOOLBOX_ROOT/.local/rustup-init.sh"
+  sh "$TOOLBOX_ROOT/.local/rustup-init.sh" -y --no-modify-path --profile minimal --default-toolchain 1.90.0
+fi
+rustup toolchain install 1.90.0 --profile minimal
+cargo +1.90.0 install binwalk --version 3.1.0 --locked --jobs 2
+echo 'Installed. Run: source scripts/env && ./scripts/check'

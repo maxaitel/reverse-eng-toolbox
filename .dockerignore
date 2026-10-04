@@ -1,0 +1,9 @@
+*
+!scripts/
+!scripts/**
+!requirements.txt
+!Dockerfile
+!.codex/
+!.codex/config.toml
+!AGENTS.md
+!README.md

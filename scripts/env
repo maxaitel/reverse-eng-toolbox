@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+export TOOLBOX_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+export PATH="$TOOLBOX_ROOT/.venv/bin:$TOOLBOX_ROOT/.local/cargo/bin:$PATH"
+export CARGO_HOME="$TOOLBOX_ROOT/.local/cargo" RUSTUP_HOME="$TOOLBOX_ROOT/.local/rust"
+export GHIDRA_INSTALL_DIR="${GHIDRA_INSTALL_DIR:-$TOOLBOX_ROOT/.local/ghidra_12.1.3_PUBLIC}"
+export XDG_CACHE_HOME="$TOOLBOX_ROOT/.local/cache"
+export XDG_CONFIG_HOME="$TOOLBOX_ROOT/.local/config"
+export HF_HOME="$XDG_CACHE_HOME/huggingface"
+export ANONYMIZED_TELEMETRY=False

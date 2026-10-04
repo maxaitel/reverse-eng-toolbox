@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(dirname "$0")/env"
+exec "$TOOLBOX_ROOT/.venv/bin/python" "$TOOLBOX_ROOT/scripts/check.py"

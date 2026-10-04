@@ -1,0 +1,6 @@
+pyghidra==3.1.0
+pyghidra-mcp==0.2.5
+qemu.qmp==0.0.5
+cryptography==50.0.1
+pyserial==3.5
+pyboy==2.7.0
