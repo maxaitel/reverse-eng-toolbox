@@ -1,5 +1,5 @@
 [mcp_servers.ghidra]
 command = "bash"
-args = ["-c", 'exec "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/scripts/ghidra"']
+args = ["-c", 'while [ ! -x scripts/ghidra ]; do [ "$PWD" != / ] || exit 1; cd ..; done; exec scripts/ghidra']
 startup_timeout_sec = 120
 tool_timeout_sec = 300

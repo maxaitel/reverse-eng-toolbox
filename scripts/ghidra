@@ -3,4 +3,4 @@ set -euo pipefail
 source "$(dirname "$0")/env"
 mkdir -p "$TOOLBOX_ROOT/workspace/ghidra"
 exec "$TOOLBOX_ROOT/.venv/bin/pyghidra-mcp" --transport stdio \
-  --project-path "$TOOLBOX_ROOT/workspace/ghidra" --project-name toolbox --max-workers 2 "$@"
+  --project-path "$TOOLBOX_ROOT/workspace/ghidra" --project-name toolbox --max-workers 2 --no-symbols "$@"

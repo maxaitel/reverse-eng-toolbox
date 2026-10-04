@@ -16,6 +16,7 @@ sudo_cmd=()
 mkdir -p "$TOOLBOX_ROOT/.local" "$TOOLBOX_ROOT/workspace" "$TOOLBOX_ROOT/projects"
 python3 -m venv "$TOOLBOX_ROOT/.venv"
 python -m pip install -r "$TOOLBOX_ROOT/requirements.txt"
+python -c 'from chromadb.utils.embedding_functions import DefaultEmbeddingFunction; DefaultEmbeddingFunction()(["toolbox setup"])'
 archive="$TOOLBOX_ROOT/.local/ghidra.zip"
 if [[ ! -d $GHIDRA_INSTALL_DIR ]]; then
   curl -fL --retry 3 https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.3_build/ghidra_12.1.3_PUBLIC_20260817.zip -o "$archive"
@@ -28,5 +29,22 @@ if [[ ! -x $CARGO_HOME/bin/rustup ]]; then
   sh "$TOOLBOX_ROOT/.local/rustup-init.sh" -y --no-modify-path --profile minimal --default-toolchain 1.90.0
 fi
 rustup toolchain install 1.90.0 --profile minimal
-cargo +1.90.0 install binwalk --version 3.1.0 --locked --jobs 2
+binwalk_source="$TOOLBOX_ROOT/.local/src/binwalk-3.1.0"
+curl -fL --retry 3 https://static.crates.io/crates/binwalk/binwalk-3.1.0.crate -o "$TOOLBOX_ROOT/.local/binwalk.tar.gz"
+echo "99d5dc70f5021c55624f098adae4d1de9c1c07d000475664704b675aad7e0811  $TOOLBOX_ROOT/.local/binwalk.tar.gz" | sha256sum -c -
+mkdir -p "$TOOLBOX_ROOT/.local/src"
+tar -xzf "$TOOLBOX_ROOT/.local/binwalk.tar.gz" -C "$TOOLBOX_ROOT/.local/src"
+# Track submitted jobs until their results are consumed; upstream can exit before workers start.
+python - "$binwalk_source/src/main.rs" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text().replace('while !target_files.is_empty() || workers.active_count() > 0 {',
+    'let mut pending_jobs = 0;\n    while !target_files.is_empty() || pending_jobs > 0 {')
+s = s.replace('            spawn_worker(', '            pending_jobs += 1;\n            spawn_worker(')
+s = s.replace('if let Ok(results) = worker_rx.try_recv() {', 'if let Ok(results) = worker_rx.try_recv() {\n            pending_jobs -= 1;')
+assert s.count('pending_jobs') == 4
+p.write_text(s)
+PY
+cargo +1.90.0 install --path "$binwalk_source" --locked --jobs 2 --force
 echo 'Installed. Run: source scripts/env && ./scripts/check'

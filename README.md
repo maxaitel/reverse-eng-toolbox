@@ -16,7 +16,8 @@ Use the setup command as your cloud environment's setup hook. It downloads sever
 GB and installs system packages; it never connects to or flashes hardware.
 Python packages and Ghidra live in this checkout. Re-run setup after moving it.
 Ubuntu supplies QEMU and build tools; Ghidra, Binwalk and Python tool versions
-are pinned. Binwalk includes common archive/filesystem extractors, not every
+are pinned. Binwalk 3.1.0 has a small worker-completion fix to prevent zero-file
+scans; it includes common archive/filesystem extractors, not every
 optional third-party extractor.
 
 Alternatively: `docker build --platform linux/amd64 -t re-toolbox .`, then
@@ -25,9 +26,10 @@ Alternatively: `docker build --platform linux/amd64 -t re-toolbox .`, then
 Put work in ignored `projects/`; use ignored `workspace/` for scratch and Ghidra
 databases. The project Codex config launches Ghidra over stdio where project MCP
 is supported; otherwise use `scripts/ghidra` or PyGhidra from the shell.
-Semantic search downloads its embedding model on first use and caches it locally.
+Setup caches the semantic-search model. Automatic remote PDB lookup is disabled
+to keep the MCP stdio connection free of third-party console output.
 
 Binary Ninja Free and Mac desktop automation are not included. ADB, fastboot and
 serial tools are installed, but physical hardware requires a separate connection.
-`scripts/check` exercises Ghidra decompilation/MCP, QEMU/GDB/QMP, Binwalk extraction,
+`scripts/check` exercises Ghidra decompilation/search/MCP, QEMU/GDB/QMP, Binwalk extraction,
 and Python imports using synthetic inputs; it does not test physical devices.

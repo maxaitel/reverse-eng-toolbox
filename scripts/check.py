@@ -24,10 +24,12 @@ async def check(root):
     print('PASS: executables and Python imports', flush=True)
     payload = bytes(range(256)) * 64
     archive = root / 'sample.gz'
-    archive.write_bytes(gzip.compress(payload))
-    subprocess.run(['binwalk', '-e', '-C', str(root / 'extracted'), str(archive)],
-                   check=True, capture_output=True, timeout=30)
-    assert any(p.is_file() and p.read_bytes() == payload for p in (root / 'extracted').rglob('*'))
+    archive.write_bytes(gzip.compress(payload, mtime=0))
+    for attempt in range(5):
+        output = root / f'extracted-{attempt}'
+        result = subprocess.run(['binwalk', '-e', '-C', str(output), str(archive)],
+                                check=True, capture_output=True, text=True, timeout=30)
+        assert any(p.is_file() and p.read_bytes() == payload for p in output.rglob('*')), result.stdout + result.stderr
     print('PASS: Binwalk extraction', flush=True)
 
     code = root / 'probe.bin'
@@ -81,10 +83,25 @@ async def check(root):
     async with stdio_client(server) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
+            listing = await session.call_tool('list_project_binaries', {})
+            assert not listing.isError, listing
+            programs = listing.structuredContent['programs']
+            assert len(programs) == 1, programs
             result = await session.call_tool('decompile_function',
-                {'binary_name': 'probe', 'name_or_address': 'add_numbers'})
+                {'binary_name': programs[0]['name'], 'name_or_address': 'add_numbers'})
             assert not result.isError and '+' in result.model_dump_json(), result
             print('PASS: Ghidra MCP import, analysis and decompilation', flush=True)
+            for _ in range(120):
+                listing = await session.call_tool('list_project_binaries', {})
+                if listing.structuredContent['programs'][0]['code_indexed']:
+                    break
+                await asyncio.sleep(1)
+            else:
+                raise RuntimeError('Ghidra semantic index did not finish')
+            result = await session.call_tool('search_code',
+                {'binary_name': programs[0]['name'], 'query': 'add two integers', 'limit': 2})
+            assert not result.isError and 'add_numbers' in result.model_dump_json(), result
+            print('PASS: Ghidra semantic code search', flush=True)
 
 
 with tempfile.TemporaryDirectory(prefix='toolbox-check-') as tmp:
