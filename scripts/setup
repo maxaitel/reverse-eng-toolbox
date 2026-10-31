@@ -11,8 +11,10 @@ sudo_cmd=()
   ca-certificates curl git unzip zip xz-utils bzip2 zstd lz4 p7zip-full squashfs-tools \
   file xxd binutils patch build-essential clang llvm lld cmake meson ninja-build pkg-config \
   libglib2.0-dev libpixman-1-dev libfdt-dev libssl-dev libfontconfig1-dev liblzma-dev \
-  python3-dev python3-venv openjdk-21-jdk-headless qemu-system-arm qemu-utils \
-  gdb-multiarch device-tree-compiler adb fastboot
+  python3-dev python3-venv openjdk-21-jdk-headless qemu-system-arm qemu-utils qemu-user \
+  gdb-multiarch device-tree-compiler adb fastboot \
+  gcc-arm-linux-gnueabi gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu libc6-dev-arm64-cross \
+  libmagic1 liblzo2-2 liblzo2-dev cpio mtools fdisk mtd-utils e2fsprogs
 mkdir -p "$TOOLBOX_ROOT/.local" "$TOOLBOX_ROOT/workspace" "$TOOLBOX_ROOT/projects"
 python3 -m venv "$TOOLBOX_ROOT/.venv"
 python -m pip install -r "$TOOLBOX_ROOT/requirements.txt"
@@ -47,4 +49,14 @@ assert s.count('pending_jobs') == 4
 p.write_text(s)
 PY
 cargo +1.90.0 install --path "$binwalk_source" --locked --jobs 2 --force
+# Upstream release packages; Ubuntu 24.04 does not provide these tools consistently.
+for spec in \
+  'https://github.com/radareorg/radare2/releases/download/6.2.4/radare2_6.2.4_amd64.deb 7019eedc0e0e87d1f53d6b8f5fc62b898567679c5efdce7fbfc557c9e7655e90 radare2.deb' \
+  'https://github.com/onekey-sec/sasquatch/releases/download/sasquatch-v4.5.1-6/sasquatch_1.0_amd64.deb efbc92bd27594e01211e1b582f105a463a0017360a0746a93de3f283906ade95 sasquatch.deb'; do
+  read -r url digest filename <<< "$spec"
+  package="$TOOLBOX_ROOT/.local/$filename"
+  curl -fL --retry 3 "$url" -o "$package"
+  echo "$digest  $package" | sha256sum -c -
+  "${sudo_cmd[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y "$package"
+done
 echo 'Installed. Run: source scripts/env && ./scripts/check'

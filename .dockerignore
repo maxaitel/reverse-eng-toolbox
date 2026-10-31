@@ -7,3 +7,6 @@
 !.codex/config.toml
 !AGENTS.md
 !README.md
+
+!re_tools/
+!re_tools/**

@@ -1,6 +1,7 @@
 FROM ubuntu:24.04
 WORKDIR /opt/re-toolbox
 COPY requirements.txt .
+COPY re_tools/ re_tools/
 COPY scripts/setup scripts/env scripts/
 RUN ./scripts/setup --install
 COPY scripts/ scripts/
