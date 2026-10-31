@@ -1,8 +1,7 @@
 # Reverse engineering toolbox
 
-Headless Linux toolbox: Ghidra + PyGhidra/MCP, Binwalk 3, ARM/AArch64 QEMU,
-GDB multiarch, LLVM/Clang, CMake/Meson/Ninja, device-tree tools, ADB/fastboot,
-QMP, PyBoy, and Python cryptography/serial support. No firmware or projects included.
+Headless Ubuntu toolbox for firmware extraction, binary analysis, emulation and
+Ghidra MCP. No firmware, dumps, credentials or projects are included.
 
 On **Ubuntu 24.04 x86-64**, with root or sudo and internet access:
 
@@ -12,24 +11,44 @@ source scripts/env
 ./scripts/check
 ```
 
-Use the setup command as your cloud environment's setup hook. It downloads several
-GB and installs system packages; it never connects to or flashes hardware.
-Python packages and Ghidra live in this checkout. Re-run setup after moving it.
-Ubuntu supplies QEMU and build tools; Ghidra, Binwalk and Python tool versions
-are pinned. Binwalk 3.1.0 has a small worker-completion fix to prevent zero-file
-scans; it includes common archive/filesystem extractors, not every
-optional third-party extractor.
+Setup downloads several GB and installs system packages. It never connects to or
+flashes hardware. Alternatively:
 
-Alternatively: `docker build --platform linux/amd64 -t re-toolbox .`, then
-`docker run --rm -it re-toolbox`. No KVM, GPU, or privileged container is required.
+```sh
+docker build --platform linux/amd64 -t re-toolbox .
+docker run --rm --network none --memory 4g --cpus 2 --pids-limit 512 re-toolbox ./scripts/check
+```
+
+Included tools:
+
+- Ghidra/PyGhidra and MCP import, decompilation and semantic code search; radare2/r2pipe,
+  LLVM/Clang, multiarch GDB, Capstone, Unicorn and LIEF.
+- Patched Binwalk 3, unblob, sasquatch/unsquashfs, Jefferson (JFFS2), UBI reader,
+  archive utilities, device-tree tools, mtd-utils and esptool for offline ESP images.
+- ARM/AArch64 system QEMU and QMP, user-mode QEMU and ARM/AArch64 Linux cross-compilers.
+- ADB/fastboot, Python serial/cryptography and PyBoy, plus CMake/Meson/Ninja.
+
+The genuine synthetic checks cover gzip/SquashFS/JFFS2 extraction, binary symbols,
+Unicorn execution, QEMU/GDB breakpoints and register stepping, QMP pause/resume,
+AArch64 cross-compilation/user-mode execution, and Ghidra MCP decompilation/search.
+UBI and esptool get import checks; this does not prove hardware access, arbitrary
+vendor image support, or that a complete appliance can boot. No JTAG/SWD, SPI/I2C,
+CAN or automatic USB passthrough is configured. Binary Ninja, angr, Rizin and
+coverage-guided fuzzers are not bundled. Unblob/Binwalk do not include every optional
+third-party extractor.
 
 Put work in ignored `projects/`; use ignored `workspace/` for scratch and Ghidra
-databases. The project Codex config launches Ghidra over stdio where project MCP
-is supported; otherwise use `scripts/ghidra` or PyGhidra from the shell.
-Setup caches the semantic-search model. Automatic remote PDB lookup is disabled
-to keep the MCP stdio connection free of third-party console output.
+projects. `.codex/config.toml` launches `scripts/ghidra` over stdio where project MCP
+is supported. Otherwise call the launcher directly. Setup caches local embeddings;
+no paid model/API key is needed. Automatic remote PDB lookup is disabled.
 
-Binary Ninja Free and Mac desktop automation are not included. ADB, fastboot and
-serial tools are installed, but physical hardware requires a separate connection.
-`scripts/check` exercises Ghidra decompilation/search/MCP, QEMU/GDB/QMP, Binwalk extraction,
-and Python imports using synthetic inputs; it does not test physical devices.
+The Ghidra launcher can also reuse Homebrew Ghidra/Java 21 on macOS with the Python
+dependencies installed in `.venv`. Set `GHIDRA_INSTALL_DIR` and `JAVA_HOME_OVERRIDE`
+for other installations. Full setup/check remains Ubuntu x86-64 only.
+
+The canonical shared launcher/checks live in [`re_tools/`](re_tools/README.md), also
+vendored into Capri with commit/hash provenance. Firmware improvements draw on
+Capri's tool selection, without importing its web tools, agents or customer code.
+Ghidra, Binwalk, radare2 and sasquatch downloads are version/checksum-pinned;
+Python top-level versions are pinned. Apt and transitive Python resolution are
+not fully locked. See shared documentation for licenses and test scope.
